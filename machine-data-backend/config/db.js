@@ -2,8 +2,12 @@ const mongoose = require("mongoose");
 
 async function connectDB() {
   try {
-    await mongoose.connect("mongodb://127.0.0.1:27017/machineData");
-    console.log("MongoDB Connected Locally");
+    const mongoURI =
+      process.env.MONGO_URI || "mongodb://127.0.0.1:27017/machineData";
+
+    await mongoose.connect(mongoURI);
+
+    console.log("MongoDB Connected");
   } catch (error) {
     console.error("MongoDB Connection Failed:", error.message);
     process.exit(1);
