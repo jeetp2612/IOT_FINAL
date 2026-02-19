@@ -1,0 +1,8 @@
+{
+  "machineId": "Machine_A",
+  "temperature": 72.5,
+  "humidity": 45,
+  "pressure": 101.2,
+  "status": "Running",
+  "timestamp": "2026-02-19T10:30:00Z"
+}
