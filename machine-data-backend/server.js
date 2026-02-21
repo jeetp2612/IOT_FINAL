@@ -9,18 +9,26 @@ const app = express();
 // Connect to MongoDB
 connectDB();
 
-const allowedOrigins = [
-  "http://localhost:3000",
-  process.env.FRONTEND_URL,
-  "https://iot-final-six.vercel.app"
-].filter(Boolean);
+// Advanced CORS configuration (Production Safe)
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like Postman, mobile apps)
+      if (!origin) return callback(null, true);
 
-// CORS configuration
-app.use(cors({
-  origin: allowedOrigins,
-  methods: ["GET", "POST"],
-  credentials: true
-}));
+      if (
+        origin.includes("localhost") ||
+        origin.includes("vercel.app")
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST"],
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 
