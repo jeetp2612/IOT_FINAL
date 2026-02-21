@@ -1,18 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const fs = require("fs");
 const PDFDocument = require("pdfkit");
 const DataFile = require("../models/DataFile");
 
 // storage config
-const storage = multer.diskStorage({
-  destination: "uploads/",
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
-  }
-});
-
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 function flattenObject(obj, prefix = "") {
@@ -69,11 +62,15 @@ API 1 - Upload JSON File
 */
 router.post("/upload", upload.single("file"), async (req, res) => {
   try {
-    const jsonData = JSON.parse(fs.readFileSync(req.file.path, "utf8"));
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const jsonData = JSON.parse(req.file.buffer.toString("utf8"));
 
     const newFile = new DataFile({
-      filename: req.file.filename,
-      filepath: req.file.path,
+      filename: `${Date.now()}-${req.file.originalname}`,
+      filepath: null,
       data: jsonData,
       fileSize: req.file.size
     });
