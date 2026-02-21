@@ -1,5 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
+import axios from "axios";
+import toast from "react-hot-toast";
+
+toast.success("File uploaded successfully!");
+toast.error("Upload failed!");
+toast.loading("Uploading...");
 
 export default function Dashboard() {
   const [files, setFiles] = useState([]);
@@ -9,47 +15,22 @@ export default function Dashboard() {
 
   const API = process.env.NEXT_PUBLIC_API_URL;
 
-  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
   useEffect(() => {
+    if (!API) return;
     fetchData();
-  }, []);
-
-  const fetchJsonWithRetry = async (url, retries = 1) => {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      return await response.json();
-    } catch (err) {
-      if (retries > 0) {
-        await wait(3000);
-        return fetchJsonWithRetry(url, retries - 1);
-      }
-      throw err;
-    }
-  };
+  }, [API]);
 
   const fetchData = async () => {
-    if (!API) {
-      setError("Failed to load data");
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
     try {
-      const [filesData, statsData] = await Promise.all([
-        fetchJsonWithRetry(API),
-        fetchJsonWithRetry(`${API}/stats/summary`)
+      setLoading(true);
+      const [filesRes, statsRes] = await Promise.all([
+        axios.get(API),
+        axios.get(`${API}/stats/summary`),
       ]);
-      setFiles(Array.isArray(filesData) ? filesData : []);
-      setStats(statsData || {});
+      setFiles(filesRes.data);
+      setStats(statsRes.data);
     } catch (err) {
-      console.error("Fetch error:", err);
-      setError("Failed to load data");
+      setError("Failed to load data.");
     } finally {
       setLoading(false);
     }
@@ -60,51 +41,109 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-10">
-      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+    <div className="space-y-10">
 
-      {loading && <p className="mb-4">Loading data...</p>}
-      {error && <p className="mb-4 text-red-600">{error}</p>}
-
-      {/* Stats */}
-      <div className="flex gap-6 mb-10">
-        <div className="bg-green-100 p-5 rounded">
-          <h2>Total Files</h2>
-          <p className="text-2xl font-bold">{stats.totalFiles || 0}</p>
-        </div>
-
-        <div className="bg-blue-100 p-5 rounded">
-          <h2>Total Size (bytes)</h2>
-          <p className="text-2xl font-bold">{stats.totalSize || 0}</p>
-        </div>
+      {/* Header */}
+      <div>
+        <h1 className="text-4xl font-bold tracking-tight">
+          📊 Dashboard
+        </h1>
+        <p className="mt-2 text-slate-600">
+          Monitor uploaded machine data and download reports.
+        </p>
       </div>
 
-      {/* Files Table */}
-      <table className="w-full border">
-        <thead className="bg-gray-200">
-          <tr>
-            <th className="p-3">File Name</th>
-            <th>Upload Date</th>
-            <th>Download</th>
-          </tr>
-        </thead>
-        <tbody>
-          {files.map((file) => (
-            <tr key={file._id} className="text-center border">
-              <td className="p-3">{file.filename}</td>
-              <td>{new Date(file.uploadDate).toLocaleString()}</td>
-              <td>
-                <button
-                  onClick={() => downloadFile(file._id)}
-                  className="bg-blue-500 text-white px-4 py-2 rounded"
-                >
-                  Download
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center text-slate-500 animate-pulse">
+          Loading data...
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="rounded-xl bg-red-100 p-4 text-red-600 shadow">
+          {error}
+        </div>
+      )}
+
+      {/* Stats Cards */}
+      {!loading && !error && (
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="rounded-2xl bg-white/70 backdrop-blur-md p-6 shadow-lg hover:shadow-xl transition">
+            <h3 className="text-sm text-slate-500">Total Files</h3>
+            <p className="mt-2 text-3xl font-bold text-indigo-600">
+              {stats.totalFiles || 0}
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-white/70 backdrop-blur-md p-6 shadow-lg hover:shadow-xl transition">
+            <h3 className="text-sm text-slate-500">Total Size</h3>
+            <p className="mt-2 text-3xl font-bold text-purple-600">
+              {stats.totalSize || 0} bytes
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-white/70 backdrop-blur-md p-6 shadow-lg hover:shadow-xl transition">
+            <h3 className="text-sm text-slate-500">Last Updated</h3>
+            <p className="mt-2 text-lg font-semibold text-slate-700">
+              {files.length > 0
+                ? new Date(files[0].uploadDate).toLocaleString()
+                : "N/A"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Table Section */}
+      {!loading && !error && (
+        <div className="rounded-2xl bg-white/70 backdrop-blur-md shadow-lg overflow-hidden">
+          <div className="border-b border-slate-200 px-6 py-4">
+            <h2 className="text-lg font-semibold text-slate-700">
+              Uploaded Files
+            </h2>
+          </div>
+
+          {files.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">
+              No files uploaded yet.
+            </div>
+          ) : (
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-100 text-slate-600 uppercase text-xs">
+                <tr>
+                  <th className="px-6 py-4">File Name</th>
+                  <th className="px-6 py-4">Upload Date</th>
+                  <th className="px-6 py-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {files.map((file) => (
+                  <tr
+                    key={file._id}
+                    className="border-t hover:bg-slate-50 transition"
+                  >
+                    <td className="px-6 py-4 font-medium text-slate-700">
+                      {file.filename}
+                    </td>
+                    <td className="px-6 py-4 text-slate-500">
+                      {new Date(file.uploadDate).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => downloadFile(file._id)}
+                        className="rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2 text-white font-medium shadow-md transition hover:scale-105 hover:shadow-lg"
+                      >
+                        Download
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   );
 }
