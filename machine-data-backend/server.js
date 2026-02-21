@@ -1,4 +1,4 @@
-require("dotenv").config();
+ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
@@ -12,7 +12,7 @@ connectDB();
 app.use(cors({
   origin: [
     "http://localhost:3000",
-    process.env.FRONTEND_URL || "https://YOUR_VERCEL_DOMAIN.vercel.app"
+    process.env.FRONTEND_URL || "iot-final-six.vercel.app"
   ],
   credentials: true
 }));
