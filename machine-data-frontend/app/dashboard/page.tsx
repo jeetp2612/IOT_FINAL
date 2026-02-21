@@ -1,36 +1,59 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import axios from "axios";
 
 export default function DashboardPage() {
   const [files, setFiles] = useState<any[]>([]);
   const [stats, setStats] = useState<any>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const API = process.env.NEXT_PUBLIC_API_URL;
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const fetchFiles = useCallback(async () => {
+  const fetchJsonWithRetry = useCallback(async (url: string, retries = 1): Promise<any> => {
     try {
-      const res = await axios.get(API!);
-      setFiles(res.data);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return await response.json();
     } catch (err) {
-      console.error("Error fetching files", err);
+      if (retries > 0) {
+        await wait(3000);
+        return fetchJsonWithRetry(url, retries - 1);
+      }
+      throw err;
     }
-  }, [API]);
+  }, []);
 
-  const fetchStats = useCallback(async () => {
-    try {
-      const res = await axios.get(`${API}/stats/summary`);
-      setStats(res.data);
-    } catch (err) {
-      console.error("Error fetching stats", err);
+  const fetchData = useCallback(async () => {
+    if (!API) {
+      setError("Failed to load data");
+      setLoading(false);
+      return;
     }
-  }, [API]);
+
+    setLoading(true);
+    setError(null);
+    try {
+      const [filesData, statsData] = await Promise.all([
+        fetchJsonWithRetry(API),
+        fetchJsonWithRetry(`${API}/stats/summary`)
+      ]);
+      setFiles(Array.isArray(filesData) ? filesData : []);
+      setStats(statsData || {});
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError("Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  }, [API, fetchJsonWithRetry]);
 
   useEffect(() => {
-    fetchFiles();
-    fetchStats();
-  }, [fetchFiles, fetchStats]);
+    fetchData();
+  }, [fetchData]);
 
   const downloadFile = async (id: string) => {
     const response = await fetch(`${API}/download/${id}`);
@@ -46,6 +69,8 @@ export default function DashboardPage() {
   return (
     <div className="p-10">
       <h1 className="text-3xl font-bold mb-6">Machine Data Dashboard</h1>
+      {loading && <p className="mb-4">Loading data...</p>}
+      {error && <p className="mb-4 text-red-600">{error}</p>}
 
       <div className="flex gap-6 mb-10">
         <div className="bg-white/70 backdrop-blur-lg shadow-xl rounded-2xl p-5">

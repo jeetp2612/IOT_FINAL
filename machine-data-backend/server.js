@@ -9,12 +9,16 @@ const app = express();
 // Connect to MongoDB
 connectDB();
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  process.env.FRONTEND_URL,
+  "https://iot-final-six.vercel.app"
+].filter(Boolean);
+
 // CORS configuration
 app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "https://iot-final-six.vercel.app"
-  ],
+  origin: allowedOrigins,
+  methods: ["GET", "POST"],
   credentials: true
 }));
 
