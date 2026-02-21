@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const { v4: uuidv4 } = require("uuid");
 const fs = require("fs");
 const PDFDocument = require("pdfkit");
 const DataFile = require("../models/DataFile");
@@ -10,7 +9,7 @@ const DataFile = require("../models/DataFile");
 const storage = multer.diskStorage({
   destination: "uploads/",
   filename: (req, file, cb) => {
-    cb(null, uuidv4() + ".json");
+    cb(null, Date.now() + "-" + file.originalname);
   }
 });
 
