@@ -19,23 +19,26 @@ router.get("/", async (req, res, next) => {
 
 router.post("/", async (req, res, next) => {
   try {
-    const { filename, rowData } = req.body;
+    const body = req.body;
+    let resolvedRowData;
 
-    if (!Object.prototype.hasOwnProperty.call(req.body, "rowData")) {
-      return res.status(400).json({
-        success: false,
-        message: "rowData is required",
-      });
+    if (body && typeof body === "object" && !Array.isArray(body)) {
+      if (Object.prototype.hasOwnProperty.call(body, "rowData")) {
+        resolvedRowData = body.rowData;
+      } else {
+        const { filename, ...rest } = body;
+        resolvedRowData = Object.keys(rest).length > 0 ? rest : body;
+      }
+    } else {
+      resolvedRowData = body;
     }
 
-    const safeFilename =
-      typeof filename === "string" && filename.trim().length > 0
-        ? filename.trim()
-        : `data-row-${Date.now()}`;
+    const totalRows = await DataRow.countDocuments();
+    const safeFilename = `file-${totalRows + 1}`;
 
     const savedRow = await DataRow.create({
       filename: safeFilename,
-      rowData,
+      rowData: resolvedRowData,
     });
 
     return res.status(201).json({
