@@ -21,13 +21,6 @@ router.post("/", async (req, res, next) => {
   try {
     const { filename, rowData } = req.body;
 
-    if (!filename || typeof filename !== "string") {
-      return res.status(400).json({
-        success: false,
-        message: "filename is required and must be a string",
-      });
-    }
-
     if (!Object.prototype.hasOwnProperty.call(req.body, "rowData")) {
       return res.status(400).json({
         success: false,
@@ -35,8 +28,13 @@ router.post("/", async (req, res, next) => {
       });
     }
 
+    const safeFilename =
+      typeof filename === "string" && filename.trim().length > 0
+        ? filename.trim()
+        : `data-row-${Date.now()}`;
+
     const savedRow = await DataRow.create({
-      filename: filename.trim(),
+      filename: safeFilename,
       rowData,
     });
 
@@ -90,6 +88,7 @@ router.get("/stats/summary", async (req, res, next) => {
 
     return res.status(200).json({
       success: true,
+      totalFiles: totalRows,
       totalRows,
       lastUploadDate: latestRow ? latestRow.uploadDate : null,
     });
