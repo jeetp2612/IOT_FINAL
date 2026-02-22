@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get("/", async (req, res, next) => {
   try {
-    const rows = await DataRow.find().sort({ uploadDate: -1 });
+    const rows = await DataRow.find().sort({ uploadDate: 1 });
 
     return res.status(200).json({
       success: true,
