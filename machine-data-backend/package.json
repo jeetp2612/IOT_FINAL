@@ -1,10 +1,11 @@
 {
   "name": "machine-data-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Express + MongoDB backend for row-wise machine data ingestion",
+  "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "",
@@ -14,10 +15,7 @@
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "mongoose": "^9.2.1",
-    "multer": "^2.0.2",
-    "pdfkit": "^0.17.2",
-    "uuid": "^13.0.0"
+    "mongoose": "^9.2.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
