@@ -2,10 +2,24 @@ const express = require("express");
 const DataRow = require("../models/DataRow");
 
 const router = express.Router();
+const SINGLE_FILENAME = "machine-data-log.txt";
+
+function resolveRowData(body) {
+  if (body && typeof body === "object" && !Array.isArray(body)) {
+    if (Object.prototype.hasOwnProperty.call(body, "rowData")) {
+      return body.rowData;
+    }
+
+    return body;
+  }
+
+  return body;
+}
 
 router.get("/", async (req, res, next) => {
   try {
-    const rows = await DataRow.find().sort({ uploadDate: 1 });
+    const storedFile = await DataRow.findOne({ filename: SINGLE_FILENAME });
+    const rows = storedFile?.rows || [];
 
     return res.status(200).json({
       success: true,
@@ -19,31 +33,22 @@ router.get("/", async (req, res, next) => {
 
 router.post("/", async (req, res, next) => {
   try {
-    const body = req.body;
-    let resolvedRowData;
+    const resolvedRowData = resolveRowData(req.body);
 
-    if (body && typeof body === "object" && !Array.isArray(body)) {
-      if (Object.prototype.hasOwnProperty.call(body, "rowData")) {
-        resolvedRowData = body.rowData;
-      } else {
-        const { filename, ...rest } = body;
-        resolvedRowData = Object.keys(rest).length > 0 ? rest : body;
-      }
-    } else {
-      resolvedRowData = body;
-    }
+    const storedFile =
+      (await DataRow.findOne({ filename: SINGLE_FILENAME })) ||
+      (await DataRow.create({ filename: SINGLE_FILENAME, rows: [] }));
 
-    const totalRows = await DataRow.countDocuments();
-    const safeFilename = `file-${totalRows + 1}`;
-
-    const savedRow = await DataRow.create({
-      filename: safeFilename,
+    storedFile.rows.push({
       rowData: resolvedRowData,
     });
+    await storedFile.save();
+
+    const savedRow = storedFile.rows[storedFile.rows.length - 1];
 
     return res.status(201).json({
       success: true,
-      message: "Row data stored successfully",
+      message: "Row data appended successfully",
       data: savedRow,
     });
   } catch (error) {
@@ -51,32 +56,33 @@ router.post("/", async (req, res, next) => {
   }
 });
 
-router.get("/download/:id", async (req, res, next) => {
+router.get("/download", async (req, res, next) => {
   try {
-    const row = await DataRow.findById(req.params.id);
+    const storedFile = await DataRow.findOne({ filename: SINGLE_FILENAME });
 
-    if (!row) {
+    if (!storedFile || storedFile.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "Data row not found",
+        message: "No stored data found",
       });
     }
 
-    const textData = JSON.stringify(
-      {
-        filename: row.filename,
-        uploadDate: row.uploadDate,
-        rowData: row.rowData,
-      },
-      null,
-      2
-    );
+    const textData = storedFile.rows
+      .map((row, index) => {
+        const uploadDate = row.uploadDate
+          ? new Date(row.uploadDate).toISOString()
+          : new Date().toISOString();
+
+        return `Entry ${index + 1}\nTime: ${uploadDate}\nData:\n${JSON.stringify(
+          row.rowData,
+          null,
+          2
+        )}\n`;
+      })
+      .join("\n");
 
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${row.filename || "data-row"}-${row._id}.txt"`
-    );
+    res.setHeader("Content-Disposition", `attachment; filename="${SINGLE_FILENAME}"`);
 
     return res.status(200).send(textData);
   } catch (error) {
@@ -86,12 +92,13 @@ router.get("/download/:id", async (req, res, next) => {
 
 router.get("/stats/summary", async (req, res, next) => {
   try {
-    const totalRows = await DataRow.countDocuments();
-    const latestRow = await DataRow.findOne().sort({ uploadDate: -1 });
+    const storedFile = await DataRow.findOne({ filename: SINGLE_FILENAME });
+    const totalRows = storedFile?.rows?.length || 0;
+    const latestRow = totalRows > 0 ? storedFile.rows[totalRows - 1] : null;
 
     return res.status(200).json({
       success: true,
-      totalFiles: totalRows,
+      totalFiles: totalRows > 0 ? 1 : 0,
       totalRows,
       lastUploadDate: latestRow ? latestRow.uploadDate : null,
     });

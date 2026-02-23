@@ -1,18 +1,29 @@
 const mongoose = require("mongoose");
 
+const DataEntrySchema = new mongoose.Schema(
+  {
+    rowData: {
+      type: mongoose.Schema.Types.Mixed,
+      required: [true, "rowData is required"],
+    },
+    uploadDate: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: true }
+);
+
 const DataRowSchema = new mongoose.Schema({
   filename: {
     type: String,
-    required: [true, "filename is required"],
+    required: true,
+    default: "machine-data-log.txt",
     trim: true,
   },
-  rowData: {
-    type: mongoose.Schema.Types.Mixed,
-    required: [true, "rowData is required"],
-  },
-  uploadDate: {
-    type: Date,
-    default: Date.now,
+  rows: {
+    type: [DataEntrySchema],
+    default: [],
   },
 });
 

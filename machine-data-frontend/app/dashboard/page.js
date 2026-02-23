@@ -33,9 +33,9 @@ export default function Dashboard() {
     }
   };
 
-  const downloadText = async (id) => {
+  const downloadText = async () => {
     try {
-      const response = await fetch(`${API}/download/${id}`);
+      const response = await fetch(`${API}/download`);
       if (!response.ok) {
         throw new Error("Download failed");
       }
@@ -44,7 +44,7 @@ export default function Dashboard() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "data-row.txt";
+      a.download = "machine-data-log.txt";
       a.click();
       window.URL.revokeObjectURL(url);
     } catch {
@@ -57,7 +57,7 @@ export default function Dashboard() {
       <div>
         <h1 className="text-4xl font-bold tracking-tight">Machine Data Dashboard</h1>
         <p className="mt-2 text-slate-600">
-          Data is received directly from API and listed below.
+          Data is appended one-by-one into one stored text file.
         </p>
       </div>
 
@@ -89,8 +89,14 @@ export default function Dashboard() {
 
       {!loading && !error && (
         <div className="rounded-2xl bg-white/70 backdrop-blur-md shadow-lg overflow-hidden">
-          <div className="border-b border-slate-200 px-6 py-4">
+          <div className="border-b border-slate-200 px-6 py-4 flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-slate-700">Stored Files</h2>
+            <button
+              onClick={downloadText}
+              className="rounded-full bg-indigo-600 px-4 py-2 text-white font-medium shadow-md transition hover:opacity-90"
+            >
+              Download Text
+            </button>
           </div>
 
           {rows.length === 0 ? (
@@ -99,16 +105,15 @@ export default function Dashboard() {
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-100 text-slate-600 uppercase text-xs">
                 <tr>
-                  <th className="px-6 py-4">File Name</th>
+                  <th className="px-6 py-4">#</th>
                   <th className="px-6 py-4">Stored Time</th>
                   <th className="px-6 py-4">Data Snapshot</th>
-                  <th className="px-6 py-4 text-left">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {rows.map((row, index) => (
                   <tr key={row._id} className="border-t hover:bg-slate-50 transition align-top">
-                    <td className="px-6 py-4 font-medium text-slate-700">{row.filename}</td>
+                    <td className="px-6 py-4 font-medium text-slate-700">{index + 1}</td>
                     <td className="px-6 py-4 text-slate-500">
                       {new Date(row.uploadDate).toLocaleString()}
                     </td>
@@ -116,14 +121,6 @@ export default function Dashboard() {
                       <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed">
                         {JSON.stringify(row.rowData, null, 2)}
                       </pre>
-                    </td>
-                    <td className="px-6 py-4 text-left">
-                      <button
-                        onClick={() => downloadText(row._id)}
-                        className="rounded-full bg-indigo-600 px-4 py-2 text-white font-medium shadow-md transition hover:opacity-90"
-                      >
-                        Download Text
-                      </button>
                     </td>
                   </tr>
                 ))}
