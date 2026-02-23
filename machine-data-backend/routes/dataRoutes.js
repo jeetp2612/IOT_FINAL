@@ -73,7 +73,7 @@ router.get("/download", async (req, res, next) => {
           ? new Date(row.uploadDate).toISOString()
           : new Date().toISOString();
 
-        return `Entry ${index + 1}\nTime: ${uploadDate}\nData:\n${JSON.stringify(
+        return `Time: ${uploadDate}\nData:\n${JSON.stringify(
           row.rowData,
           null,
           2
